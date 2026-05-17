@@ -20,10 +20,11 @@ Original core thesis (Karpathy):
 """
 
 import random
+from typing import Any
 
 from config import (
   BETA_1, EPS_ADAM, BETA_2, INITIAL_LEARNING_RATE, MAX_CONTENT_LENGTH, NUM_ATTENTION_HEADS, NUM_EMBEDDING_DIMENSIONS,
-  NUM_TRAINING_STEPS, NUM_TRANSFORMER_LAYERS, RANDOM_SEED, TEMPERATURE
+  NUM_TRANSFORMER_LAYERS, RANDOM_SEED, TEMPERATURE
 )
 # The Value class is the autograd engine
 from value import Value
@@ -32,11 +33,13 @@ from docs_reader import read_docs
 
 class MicroGPT:
 
-    def __init__(self, data = None) -> None:
+    def __init__(self, num_training_steps:int, data : dict[str, Any] | None = None) -> None:
         # Fix the random seed so every run is deterministic.
         # This matters for reproducibility:
         #  same seed → same weight initialization → same training trajectory → same final model.
         random.seed(RANDOM_SEED)
+
+        self.num_training_steps = num_training_steps
 
         self.inference_only = False
 
@@ -442,10 +445,7 @@ class MicroGPT:
         #   3. Backward pass: compute gradients via backprop
         #   4. Optimizer step: update parameters
         #   5. Zero gradients: reset for next step
-
-        num_steps = NUM_TRAINING_STEPS
-
-        for step in range(num_steps):
+        for step in range(self.num_training_steps):
 
             # -------------------------------------------------------------------------
             # 1. Sample and tokenize a document
@@ -512,7 +512,7 @@ class MicroGPT:
             # lr_t(step=999) = learning_rate * 0.001 (nearly zero at end)
             # Why decay? Early training benefits from large steps (exploration);
             # late training needs small steps to fine-tune without overshooting minima.
-            lr_t = self.learning_rate * (1 - step / num_steps)
+            lr_t = self.learning_rate * (1 - step / self.num_training_steps)
 
             for i, p in enumerate(self.params):
                 # Adam update equations:
@@ -538,7 +538,7 @@ class MicroGPT:
                 p.grad = 0
 
             # Print progress on same line (\r) to avoid flooding the terminal.
-            print(f"step {step+1:4d} / {num_steps:4d} | loss {loss.data:.4f}", end='\r')
+            print(f"step {step+1:4d} / {self.num_training_steps:4d} | loss {loss.data:.4f}", end='\r')
 
         print()  # newline after training is done
 

@@ -19,7 +19,7 @@ class ModelData:
         return data
 
     @staticmethod
-    def save(model: MicroGPT, path: str):
+    def save(model: MicroGPT, path: str) -> None:
         with open(path, "w") as file_handle:
             file_handle.write(json.dumps({
                 "n_layer": model.n_layer,

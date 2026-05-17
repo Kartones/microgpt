@@ -32,11 +32,9 @@ BETA_2 = 0.99
 # Small constant to prevent division by zero in the update.
 EPS_ADAM = 1e-8
 
-# Total training steps. With 1 layer and 16 dims, 1000 is enough to see meaningful learning.
+# Default total training steps. With 1 layer and 16 dims, 1000 is enough to see meaningful learning.
 # Production models train for billions.
-# NUM_TRAINING_STEPS = 1000
-# TODO: Remove, lower value just for quick testing
-NUM_TRAINING_STEPS = 100
+DEFAULT_NUM_TRAINING_STEPS = 1000
 
 # Temperature controls the "creativity" of generation.
 # Applied by dividing logits by temperature before softmax.

@@ -25,8 +25,6 @@ Some ideas, mostly extracted from the Author's blog post. Note that this is **no
 
 TENSORS: Every operation here is on scalars. Real implementations use NumPy/PyTorch tensors — parallelized matrix ops that are 100-1000× faster.
 
-GPU EXECUTION: PyTorch moves tensors to GPU with .cuda(), getting another 100-1000× speedup via thousands of parallel cores.
-
 BATCHING: Training on one document at a time is wasteful. Real training processes B=512 or B=4096 documents simultaneously.
 
 MIXED PRECISION: float32 parameters here; production uses bfloat16/float16 (half memory, faster ops) with float32 optimizer state.
@@ -34,10 +32,6 @@ MIXED PRECISION: float32 parameters here; production uses bfloat16/float16 (half
 FLASH ATTENTION: The naive attention here is O(T^2) in memory. FlashAttention (Dao et al. 2022) computes the same result in O(T) memory via tiling.
 
 GRADIENT CHECKPOINTING: We keep the entire computation graph in memory. Checkpointing trades memory for recomputation to handle long sequences.
-
-DISTRIBUTED TRAINING: Trillion-parameter models need thousands of GPUs and complex parallelism strategies (tensor, pipeline, data parallel).
-
-TOKENIZER: Character-level is too granular for long text. Production uses BPE (50K+ vocabulary) to get shorter sequences with richer tokens.
 
 WEIGHT TYING: wte and lm_head often share weights (Inan et al. 2016), halving output layer parameters with no quality loss.
 
