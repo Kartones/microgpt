@@ -20,6 +20,7 @@ KEY_NUM_EMBEDDING_DIMENSIONS = "n_embd"
 
 KEY_NUM_TRAINING_STEPS = "num_training_steps"
 KEY_VOCAB_SIZE = "vocab_size"
+KEY_SEEN_TRAINING_DOCS = "seen_training_docs"
 
 class ModelData:
 
@@ -58,6 +59,8 @@ class ModelData:
             file_handle.write(json.dumps({
                 KEY_NUM_TRAINING_STEPS: model.num_training_steps,
                 KEY_VOCAB_SIZE: model.vocab_size,
+                # will be empty if not in verbose mode
+                KEY_SEEN_TRAINING_DOCS: model.seen_training_docs,
             }))
 
     @staticmethod

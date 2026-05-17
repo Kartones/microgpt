@@ -45,3 +45,6 @@ DEFAULT_NUM_TRAINING_STEPS = 1000
 # Here temperature = 0.5: slightly below 1, biases toward more probable characters
 # while still allowing diversity. Prevents generating the same name every time.
 TEMPERATURE = 0.5
+
+# If true, will store additional metadata information. Requires more memory.
+VERBOSE_METADATA = True

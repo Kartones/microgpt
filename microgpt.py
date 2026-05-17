@@ -24,7 +24,7 @@ from typing import Any
 
 from config import (
   BETA_1, EPS_ADAM, BETA_2, INITIAL_LEARNING_RATE, MAX_CONTENT_LENGTH, NUM_ATTENTION_HEADS, NUM_EMBEDDING_DIMENSIONS,
-  NUM_TRANSFORMER_LAYERS, RANDOM_SEED, TEMPERATURE
+  NUM_TRANSFORMER_LAYERS, RANDOM_SEED, TEMPERATURE, VERBOSE_METADATA
 )
 # The Value class is the autograd engine
 from value import Value
@@ -40,6 +40,8 @@ class MicroGPT:
         random.seed(RANDOM_SEED)
 
         self.num_training_steps = num_training_steps
+
+        self.seen_training_docs : list[str] = []
 
         self.inference_only = False
 
@@ -79,10 +81,7 @@ class MicroGPT:
         if self.inference_only:
             raise ValueError("Tokenizer should not be called in inference-only mode")
 
-        # uchars: sorted list of all unique characters that appear in the dataset.
-        # For a names dataset this will be ['a', 'b', 'c', ..., 'z'] — 26 characters.
-        # Sorted so the mapping is deterministic (not dependent on dict insertion order).
-        self.uchars = sorted(set(''.join(self.docs)))
+        self.uchars = self._unique_chars(self.docs)
 
         self.BOS = self.get_BOS_token_id(self.uchars)
 
@@ -169,6 +168,13 @@ class MicroGPT:
         print(f"num params: {len(self.params)}")
         # With these defaults: 27*16 + 16*16 + 27*16 + 4*(16*16*4 + 16*16*2) ≈ 3,776 params.
         # GPT-2 small: 117M params. GPT-4: estimated ~1.8T params.
+
+    @staticmethod
+    def _unique_chars(docs: list[str]) -> list[str]:
+        # uchars: sorted list of all unique characters that appear in the dataset.
+        # For a names dataset this will be ['a', 'b', 'c', ..., 'z'] — 26 characters.
+        # Sorted so the mapping is deterministic (not dependent on dict insertion order).
+        return sorted(set(''.join(docs)))
 
     @staticmethod
     def get_vocabulary_size(uchars: list[str]) -> int:
@@ -480,6 +486,9 @@ class MicroGPT:
             # Cycle through the shuffled dataset. With 32K docs and 1K steps, we see
             # only ~3% of the dataset — but names share patterns, so generalization occurs.
             doc = self.docs[step % len(self.docs)]
+
+            if VERBOSE_METADATA:
+                self.seen_training_docs.append(doc)
 
             # Tokenize: convert name characters to integer IDs.
             # Wrap with BOS on both sides: [BOS, char0, char1, ..., charN, BOS]

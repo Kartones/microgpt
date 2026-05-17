@@ -24,9 +24,49 @@ python3 main.py --load
 Configuration parameters. Note that you also need to specify them on inference only mode:
 - `--steps=<value>`: Number of training steps
 
+## Examples
+
+Training against a 5-chars long, lowercased words dataset extracted from the first Dune book:
+
+```bash
+python3 main.py
+--- training ---
+num docs: 1598
+vocab size: 28
+num params: 4224
+step 1000 / 1000 | loss 1.7255
+--- inference (new, hallucinated names) ---
+sample  1: sales
+sample  2: tanal
+sample  3: alone
+sample  4: sarer
+sample  5: weads
+sample  6: stese
+sample  7: stors
+sample  8: chald
+sample  9: sheal
+sample 10: stare
+sample 11: wings
+sample 12: camel
+sample 13: tares
+sample 14: dares
+sample 15: gaxed
+sample 16: bound
+sample 17: witha
+sample 18: stard
+sample 19: lroms
+sample 20: trers
+```
+
+Of which:
+- `sales` is hallucinated (not in the dataset), but valid
+- `alone`, `camel`, `bound` are in the dataset and were not seen during training
+- `stare`, `wings`, `dares` are in the dataset and were seen during training
+- The rest are hallucinated
 
 ## TODOs
 
+- flag to specify temperature and number of results to show in inference mode
 - Define at `__init__` all the attributes used in methods, e.g. self.docs
 - Code comments were added with AI assistance, they are under review at the moment.
 - I might do further code splits and refactors, as my goal is learning and thus, readability.
