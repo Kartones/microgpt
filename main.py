@@ -32,7 +32,8 @@ if __name__ == '__main__':
 
     if load_data:
         print("--- loading model data ---")
-        microgpt = MicroGPT(training_steps, model_data.load("model_data.json"))
+        data, metadata = model_data.load(training_steps)
+        microgpt = MicroGPT(training_steps, data, metadata)
     else:
         microgpt = MicroGPT(training_steps)
 
@@ -40,4 +41,4 @@ if __name__ == '__main__':
 
     if not load_data:
         print("--- saving model data ---")
-        model_data.save(microgpt, "model_data.json")
+        model_data.save(microgpt)

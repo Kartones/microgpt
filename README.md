@@ -12,8 +12,6 @@
 
 ## TODOs
 
-- if `self.inference_only`, disallow methods that might break due to missing data
-- when loading data, compare against config and exit if values differ (e.g. heads, layers...)
 - Define at `__init__` all the attributes used in methods, e.g. self.docs
 - Code comments were added with AI assistance, they are under review at the moment.
 - I might do further code splits and refactors, as my goal is learning and thus, readability.

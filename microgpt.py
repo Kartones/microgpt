@@ -33,7 +33,7 @@ from docs_reader import read_docs
 
 class MicroGPT:
 
-    def __init__(self, num_training_steps:int, data : dict[str, Any] | None = None) -> None:
+    def __init__(self, num_training_steps:int, data : dict[str, Any] | None = None, metadata : dict[str, Any] | None = None) -> None:
         # Fix the random seed so every run is deterministic.
         # This matters for reproducibility:
         #  same seed → same weight initialization → same training trajectory → same final model.
@@ -51,9 +51,11 @@ class MicroGPT:
             self.uchars = data["uchars"]
             self.state_dict = data["state_dict"]
             self.n_head = data["n_head"]
-            self.head_dim = data["head_dim"]
+            self.n_embd = data["n_embd"]
+            self.head_dim = self.get_head_dimension(self.n_embd, self.n_head)
             self.inference_only = True
-
+        if metadata:
+            self.num_training_steps = metadata["num_training_steps"]
 
     def _dataset(self) -> None:
         # A "dataset" in language modelling is just a list of text documents.
@@ -73,6 +75,9 @@ class MicroGPT:
         #
         # For names, character-level is ideal: the vocabulary is tiny (26 letters),
         # sequences are short, and we want the model to learn letter-level patterns.
+
+        if self.inference_only:
+            raise ValueError("Tokenizer should not be called in inference-only mode")
 
         # uchars: sorted list of all unique characters that appear in the dataset.
         # For a names dataset this will be ['a', 'b', 'c', ..., 'z'] — 26 characters.
@@ -103,12 +108,15 @@ class MicroGPT:
         # numbers that are learned during training. Everything else (architecture,
         # optimizer, loss) is fixed; only the parameters change.
 
+        if self.inference_only:
+            raise ValueError("Model parameters should not be initialized in inference-only mode")
+
         # Hyperparameters — chosen to be small enough for CPU training in minutes.
         self.n_layer = NUM_TRANSFORMER_LAYERS
-        n_embd = NUM_EMBEDDING_DIMENSIONS
+        self.n_embd = NUM_EMBEDDING_DIMENSIONS
         self.block_size = MAX_CONTENT_LENGTH
         self.n_head = NUM_ATTENTION_HEADS
-        self.head_dim = n_embd // self.n_head  # Dimension per head
+        self.head_dim = self.get_head_dimension(self.n_embd, self.n_head)
 
         # Helper to create a 2D matrix of random Value nodes.
         # nout × nin matrix, initialized from N(0, std).
@@ -126,18 +134,18 @@ class MicroGPT:
         self.state_dict = {
             # Token Embedding Table: vocab_size × n_embd
             # Maps each token ID to a learned vector. wte[token_id] is the embedding.
-            'wte': matrix(self.vocab_size, n_embd),
+            'wte': matrix(self.vocab_size, self.n_embd),
 
             # Positional Embedding Table: block_size × n_embd
             # Maps each position index to a learned vector. wpe[pos_id] is the embedding.
             # Note: this is LEARNED positional encoding (like GPT-2), not sinusoidal (like
             # the original Transformer). Learned positions are simpler to implement here.
-            'wpe': matrix(self.block_size, n_embd),
+            'wpe': matrix(self.block_size, self.n_embd),
 
             # Language Model Head: vocab_size × n_embd
             # Projects the final hidden state back to vocabulary logits (for next-token prediction).
             # "Logits" are unnormalized log-probabilities — one per token in the vocabulary.
-            'lm_head': matrix(self.vocab_size, n_embd),
+            'lm_head': matrix(self.vocab_size, self.n_embd),
         }
 
         # For each transformer layer, add the attention and MLP weight matrices.
@@ -145,10 +153,10 @@ class MicroGPT:
             # Attention projections: all n_embd × n_embd (square matrices).
             # Q, K, V projections transform the input into queries, keys, and values.
             # attn_wo projects the concatenated head outputs back to n_embd.
-            self.state_dict[f'layer{i}.attn_wq'] = matrix(n_embd, n_embd)  # Query projection
-            self.state_dict[f'layer{i}.attn_wk'] = matrix(n_embd, n_embd)  # Key projection
-            self.state_dict[f'layer{i}.attn_wv'] = matrix(n_embd, n_embd)  # Value projection
-            self.state_dict[f'layer{i}.attn_wo'] = matrix(n_embd, n_embd)  # Output projection
+            self.state_dict[f'layer{i}.attn_wq'] = matrix(self.n_embd, self.n_embd)  # Query projection
+            self.state_dict[f'layer{i}.attn_wk'] = matrix(self.n_embd, self.n_embd)  # Key projection
+            self.state_dict[f'layer{i}.attn_wv'] = matrix(self.n_embd, self.n_embd)  # Value projection
+            self.state_dict[f'layer{i}.attn_wo'] = matrix(self.n_embd, self.n_embd)  # Output projection
 
             # Quick reminder:
             # Queries: representation of what the current token is looking for.
@@ -160,8 +168,8 @@ class MicroGPT:
             # MLP projections — expand to 4× width then contract back.
             # The 4× expansion ("intermediate size") is a GPT-2 convention.
             # More width = more capacity for storing knowledge in the MLP.
-            self.state_dict[f'layer{i}.mlp_fc1'] = matrix(4 * n_embd, n_embd)  # Expand: 16 → 64
-            self.state_dict[f'layer{i}.mlp_fc2'] = matrix(n_embd, 4 * n_embd)  # Contract: 64 → 16
+            self.state_dict[f'layer{i}.mlp_fc1'] = matrix(4 * self.n_embd, self.n_embd)  # Expand: 16 → 64
+            self.state_dict[f'layer{i}.mlp_fc2'] = matrix(self.n_embd, 4 * self.n_embd)  # Contract: 64 → 16
 
         # Flatten all parameters into a single list for the optimizer.
         # The optimizer needs to iterate over every scalar Value to update it.
@@ -169,6 +177,13 @@ class MicroGPT:
         print(f"num params: {len(self.params)}")
         # With these defaults: 27*16 + 16*16 + 27*16 + 4*(16*16*4 + 16*16*2) ≈ 3,776 params.
         # GPT-2 small: 117M params. GPT-4: estimated ~1.8T params.
+
+    @staticmethod
+    def get_head_dimension(n_embd: int, n_head: int) -> int:
+        # Dimension per head
+        if n_embd % n_head != 0:
+            raise ValueError(f"Embedding dimension {n_embd} must be divisible by number of heads {n_head}")
+        return n_embd // n_head
 
     @staticmethod
     def _linear(x: list[Value], w: list[list[Value]]) -> list[Value]:
@@ -439,6 +454,10 @@ class MicroGPT:
 
     def _training(self) -> None:
         # The training loop is the engine that makes the model learn.
+
+        if self.inference_only:
+            raise ValueError("Training should not be called in inference-only mode")
+
         # Each step:
         #   1. Sample a document
         #   2. Forward pass: build computation graph, compute loss
