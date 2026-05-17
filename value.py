@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import math
 
 # =============================================================================
@@ -129,3 +130,10 @@ class Value:
         for v in reversed(topo):
             for child, local_grad in zip(v._children, v._local_grads):
                 child.grad += local_grad * v.grad
+
+
+class ValueJSONEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, Value):
+            return obj.data
+        return super().default(obj)

@@ -1,8 +1,5 @@
 """
-microgpt_commented.py — A heavily annotated version of microgpt.py by @karpathy.
-
-The goal of this file is to teach every design decision behind building a GPT
-from scratch, using only Python's standard library. No NumPy, no PyTorch, no deps.
+A heavily annotated version of microgpt.py by @karpathy.
 
 Original source: https://github.com/karpathy/microgpt
 Blog post (source of many annotations): https://karpathy.github.io/2026/02/12/microgpt/
@@ -15,7 +12,7 @@ Reading guide:
   5. Training loop        — how the model learns from data
   6. Inference            — how the trained model generates text
 
-Core thesis (Karpathy):
+Original core thesis (Karpathy):
   "This file is the complete algorithm. Everything else is just efficiency."
   Every production system (GPT-4, LLaMA, etc.) does exactly what this file does —
   it just does it faster (GPUs, batching, fused kernels, mixed precision, etc.).
@@ -35,13 +32,25 @@ from docs_reader import read_docs
 
 class MicroGPT:
 
-    def __init__(self) -> None:
+    def __init__(self, data = None) -> None:
         # Fix the random seed so every run is deterministic.
-        # This matters for reproducibility: same seed → same weight initialization →
-        # same training trajectory → same final model. Essential when debugging.
+        # This matters for reproducibility:
+        #  same seed → same weight initialization → same training trajectory → same final model.
         random.seed(RANDOM_SEED)
 
-        # TODO: define here all the attributes used below, e.g. self.docs
+        self.inference_only = False
+
+        if data:
+            self.n_layer = data["n_layer"]
+            self.BOS = data["bos"]
+            self.block_size = data["block_size"]
+            self.vocab_size = data["vocab_size"]
+            self.uchars = data["uchars"]
+            self.state_dict = data["state_dict"]
+            self.n_head = data["n_head"]
+            self.head_dim = data["head_dim"]
+            self.inference_only = True
+
 
     def _dataset(self) -> None:
         # A "dataset" in language modelling is just a list of text documents.
@@ -425,7 +434,6 @@ class MicroGPT:
         self.m = [0.0] * len(self.params)  # first moment buffers, initialized to 0
         self.v = [0.0] * len(self.params)  # second moment buffers, initialized to 0
 
-
     def _training(self) -> None:
         # The training loop is the engine that makes the model learn.
         # Each step:
@@ -532,12 +540,18 @@ class MicroGPT:
             # Print progress on same line (\r) to avoid flooding the terminal.
             print(f"step {step+1:4d} / {num_steps:4d} | loss {loss.data:.4f}", end='\r')
 
+        print()  # newline after training is done
+
     def _inference(self) -> None:
-        # After training, use the model to generate new names.
+        # After training or on demand, use the model to generate new names.
         # The model never saw these names — it learned the underlying distribution
         # of character sequences and samples from it.
 
-        print("\n--- inference (new, hallucinated names) ---")
+        # Re-seeding here so inference is deterministic regardless of whether training ran beforehand.
+        # Without this, the PRNG position differs between training mode and inference-only mode.
+        random.seed(RANDOM_SEED)
+
+        print("--- inference (new, hallucinated names) ---")
         for sample_idx in range(20):
             # Fresh KV cache for each generated name.
             keys_cache: list[list[list[Value]]]  = [[] for _ in range(self.n_layer)]
@@ -575,9 +589,13 @@ class MicroGPT:
 
 
     def run(self) -> None:
-        self._dataset()
-        self._tokenizer()
-        self._model_parameters()
-        self._optimizer()
-        self._training()
+
+        if not self.inference_only:
+            print("--- training ---")
+            self._dataset()
+            self._tokenizer()
+            self._model_parameters()
+            self._optimizer()
+            self._training()
+
         self._inference()
