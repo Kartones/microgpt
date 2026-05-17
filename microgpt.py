@@ -45,10 +45,10 @@ class MicroGPT:
 
         if data:
             self.n_layer = data["n_layer"]
-            self.BOS = data["bos"]
             self.block_size = data["block_size"]
-            self.vocab_size = data["vocab_size"]
             self.uchars = data["uchars"]
+            self.vocab_size = self.get_vocabulary_size(self.uchars)
+            self.BOS = self.get_BOS_token_id(self.uchars)
             self.state_dict = data["state_dict"]
             self.n_head = data["n_head"]
             self.n_embd = data["n_embd"]
@@ -84,17 +84,9 @@ class MicroGPT:
         # Sorted so the mapping is deterministic (not dependent on dict insertion order).
         self.uchars = sorted(set(''.join(self.docs)))
 
-        # BOS: "Beginning of Sequence" — a special token with no character equivalent.
-        # It serves dual purpose:
-        #   - Placed at the START of a sequence to signal "predict the first character"
-        #   - Placed at the END of a sequence to signal "stop generating"
-        # By reusing the same token for both, the model learns: "when I see BOS, the
-        # next thing I predict is the first character; when I predict BOS, I'm done."
-        # Its ID is len(self.uchars), i.e., one past the last character token.
-        self.BOS = len(self.uchars)
+        self.BOS = self.get_BOS_token_id(self.uchars)
 
-        # Total vocabulary size: 26 letters + 1 BOS token = 27.
-        self.vocab_size = len(self.uchars) + 1
+        self.vocab_size = self.get_vocabulary_size(self.uchars)
         print(f"vocab size: {self.vocab_size}")
 
         # Tokenization examples:
@@ -177,6 +169,22 @@ class MicroGPT:
         print(f"num params: {len(self.params)}")
         # With these defaults: 27*16 + 16*16 + 27*16 + 4*(16*16*4 + 16*16*2) ≈ 3,776 params.
         # GPT-2 small: 117M params. GPT-4: estimated ~1.8T params.
+
+    @staticmethod
+    def get_vocabulary_size(uchars: list[str]) -> int:
+        # Vocabulary size = number of unique characters + 1 for BOS token.
+        return len(uchars) + 1
+
+    @staticmethod
+    def get_BOS_token_id(uchars: list[str]) -> int:
+        # BOS: "Beginning of Sequence" — a special token with no character equivalent.
+        # It serves dual purpose:
+        #   - Placed at the START of a sequence to signal "predict the first character"
+        #   - Placed at the END of a sequence to signal "stop generating"
+        # By reusing the same token for both, the model learns: "when I see BOS, the
+        # next thing I predict is the first character; when I predict BOS, I'm done."
+        # The BOS token ID is always one past the last character token.
+        return len(uchars)
 
     @staticmethod
     def get_head_dimension(n_embd: int, n_head: int) -> int:

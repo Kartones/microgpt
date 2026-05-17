@@ -9,6 +9,21 @@
 - Input download logic removed. It is cool that it auto-downloads the dataset, but I wanted to decouple the model from only using a given names list. `input.txt` is this file (remember to rename it): [https://raw.githubusercontent.com/karpathy/makemore/988aa59/names.txt](https://raw.githubusercontent.com/karpathy/makemore/988aa59/names.txt)
 - Code split into classes and modules, and with type hints. 
 
+## Instructions
+
+Normal run:
+```bash
+python3 main.py
+```
+
+Inference only run (needs to have run with same values):
+```bash
+python3 main.py --load
+```
+
+Configuration parameters. Note that you also need to specify them on inference only mode:
+- `--steps=<value>`: Number of training steps
+
 
 ## TODOs
 
