@@ -46,5 +46,7 @@ DEFAULT_NUM_TRAINING_STEPS = 1000
 # while still allowing diversity. Prevents generating the same name every time.
 TEMPERATURE = 0.5
 
+NUM_INFERENCE_RESULTS = 20
+
 # If true, will store additional metadata information. Requires more memory.
 VERBOSE_METADATA = True

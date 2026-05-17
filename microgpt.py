@@ -23,7 +23,7 @@ import random
 from typing import Any
 
 from config import (
-  BETA_1, EPS_ADAM, BETA_2, INITIAL_LEARNING_RATE, MAX_CONTENT_LENGTH, NUM_ATTENTION_HEADS, NUM_EMBEDDING_DIMENSIONS,
+  BETA_1, EPS_ADAM, BETA_2, INITIAL_LEARNING_RATE, MAX_CONTENT_LENGTH, NUM_ATTENTION_HEADS, NUM_EMBEDDING_DIMENSIONS, NUM_INFERENCE_RESULTS,
   NUM_TRANSFORMER_LAYERS, RANDOM_SEED, TEMPERATURE, VERBOSE_METADATA
 )
 # The Value class is the autograd engine
@@ -578,17 +578,17 @@ class MicroGPT:
 
         print()  # newline after training is done
 
-    def _inference(self) -> None:
+    def _inference(self, temperature: float = TEMPERATURE, num_inference_results: int = NUM_INFERENCE_RESULTS) -> None:
         # After training or on demand, use the model to generate new names.
-        # The model never saw these names — it learned the underlying distribution
+        # The model might never have seen these names — it learned the underlying distribution
         # of character sequences and samples from it.
 
         # Re-seeding here so inference is deterministic regardless of whether training ran beforehand.
         # Without this, the PRNG position differs between training mode and inference-only mode.
         random.seed(RANDOM_SEED)
 
-        print("--- inference (new, hallucinated names) ---")
-        for sample_idx in range(20):
+        print("--- inference ---")
+        for sample_idx in range(num_inference_results):
             # Fresh KV cache for each generated name.
             keys_cache: list[list[list[Value]]]  = [[] for _ in range(self.n_layer)]
             values_cache: list[list[list[Value]]] = [[] for _ in range(self.n_layer)]
@@ -605,7 +605,7 @@ class MicroGPT:
                 # Dividing logits by T < 1 makes differences between logits larger,
                 # sharpening the softmax distribution (peakier → more deterministic).
                 # Mathematically equivalent to: softmax(logits/T)
-                probs = self._softmax([l / TEMPERATURE for l in logits])
+                probs = self._softmax([l / temperature for l in logits])
 
                 # Sample next token from the probability distribution.
                 # random.choices returns a weighted random sample — this is the
@@ -624,7 +624,7 @@ class MicroGPT:
             print(f"sample {sample_idx+1:2d}: {''.join(sample)}")
 
 
-    def run(self) -> None:
+    def run(self, temperature: float = TEMPERATURE, num_inference_results: int = NUM_INFERENCE_RESULTS) -> None:
 
         if not self.inference_only:
             print("--- training ---")
@@ -634,4 +634,4 @@ class MicroGPT:
             self._optimizer()
             self._training()
 
-        self._inference()
+        self._inference(temperature, num_inference_results)

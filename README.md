@@ -23,6 +23,8 @@ python3 main.py --load
 
 Configuration parameters. Note that you also need to specify them on inference only mode:
 - `--steps=<value>`: Number of training steps
+- `--temperature=<value>`: Temperature. Lower less "creative" so less chance of hallucination, but also more probably to repeat
+- `--num-inference-results=<value>`: How many results to generate at inference
 
 ## Examples
 
@@ -35,7 +37,7 @@ num docs: 1598
 vocab size: 28
 num params: 4224
 step 1000 / 1000 | loss 1.7255
---- inference (new, hallucinated names) ---
+--- inference ---
 sample  1: sales
 sample  2: tanal
 sample  3: alone
@@ -66,7 +68,6 @@ Of which:
 
 ## TODOs
 
-- flag to specify temperature and number of results to show in inference mode
 - Define at `__init__` all the attributes used in methods, e.g. self.docs
 - Code comments were added with AI assistance, they are under review at the moment.
 - I might do further code splits and refactors, as my goal is learning and thus, readability.
