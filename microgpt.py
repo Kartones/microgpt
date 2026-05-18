@@ -26,9 +26,10 @@ from config import (
   BETA_1, EPS_ADAM, BETA_2, INITIAL_LEARNING_RATE, MAX_CONTENT_LENGTH, NUM_ATTENTION_HEADS, NUM_EMBEDDING_DIMENSIONS, NUM_INFERENCE_RESULTS,
   NUM_TRANSFORMER_LAYERS, RANDOM_SEED, TEMPERATURE, VERBOSE_METADATA
 )
-# The Value class is the autograd engine
-from value import Value
 from docs_reader import read_docs
+from inference_decorator import InferenceDecorator
+from tokenizer import unique_chars, get_BOS_token_id, get_vocabulary_size
+from value import Value
 
 
 class MicroGPT:
@@ -49,8 +50,8 @@ class MicroGPT:
             self.n_layer = data["n_layer"]
             self.block_size = data["block_size"]
             self.uchars = data["uchars"]
-            self.vocab_size = self.get_vocabulary_size(self.uchars)
-            self.BOS = self.get_BOS_token_id(self.uchars)
+            self.vocab_size = get_vocabulary_size(self.uchars)
+            self.BOS = get_BOS_token_id(self.uchars)
             self.state_dict = data["state_dict"]
             self.n_head = data["n_head"]
             self.n_embd = data["n_embd"]
@@ -81,11 +82,11 @@ class MicroGPT:
         if self.inference_only:
             raise ValueError("Tokenizer should not be called in inference-only mode")
 
-        self.uchars = self._unique_chars(self.docs)
+        self.uchars = unique_chars(self.docs)
 
-        self.BOS = self.get_BOS_token_id(self.uchars)
+        self.BOS = get_BOS_token_id(self.uchars)
 
-        self.vocab_size = self.get_vocabulary_size(self.uchars)
+        self.vocab_size = get_vocabulary_size(self.uchars)
         print(f"vocab size: {self.vocab_size}")
 
         # Tokenization examples:
@@ -168,29 +169,6 @@ class MicroGPT:
         print(f"num params: {len(self.params)}")
         # With these defaults: 27*16 + 16*16 + 27*16 + 4*(16*16*4 + 16*16*2) ≈ 3,776 params.
         # GPT-2 small: 117M params. GPT-4: estimated ~1.8T params.
-
-    @staticmethod
-    def _unique_chars(docs: list[str]) -> list[str]:
-        # uchars: sorted list of all unique characters that appear in the dataset.
-        # For a names dataset this will be ['a', 'b', 'c', ..., 'z'] — 26 characters.
-        # Sorted so the mapping is deterministic (not dependent on dict insertion order).
-        return sorted(set(''.join(docs)))
-
-    @staticmethod
-    def get_vocabulary_size(uchars: list[str]) -> int:
-        # Vocabulary size = number of unique characters + 1 for BOS token.
-        return len(uchars) + 1
-
-    @staticmethod
-    def get_BOS_token_id(uchars: list[str]) -> int:
-        # BOS: "Beginning of Sequence" — a special token with no character equivalent.
-        # It serves dual purpose:
-        #   - Placed at the START of a sequence to signal "predict the first character"
-        #   - Placed at the END of a sequence to signal "stop generating"
-        # By reusing the same token for both, the model learns: "when I see BOS, the
-        # next thing I predict is the first character; when I predict BOS, I'm done."
-        # The BOS token ID is always one past the last character token.
-        return len(uchars)
 
     @staticmethod
     def get_head_dimension(n_embd: int, n_head: int) -> int:
@@ -587,6 +565,8 @@ class MicroGPT:
         # Without this, the PRNG position differs between training mode and inference-only mode.
         random.seed(RANDOM_SEED)
 
+        inference_decorator = InferenceDecorator()
+
         print("--- inference ---")
         for sample_idx in range(num_inference_results):
             # Fresh KV cache for each generated name.
@@ -621,7 +601,7 @@ class MicroGPT:
                 # Map token ID back to character and append to the current sample.
                 sample.append(self.uchars[token_id])
 
-            print(f"sample {sample_idx+1:2d}: {''.join(sample)}")
+            print(inference_decorator.decorate_result(''.join(sample), sample_idx))
 
 
     def run(self, temperature: float = TEMPERATURE, num_inference_results: int = NUM_INFERENCE_RESULTS) -> None:

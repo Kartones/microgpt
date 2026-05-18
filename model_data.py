@@ -1,11 +1,14 @@
 
 import json
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from microgpt import MicroGPT
 
 from config import (
     NUM_EMBEDDING_DIMENSIONS, NUM_TRANSFORMER_LAYERS, MAX_CONTENT_LENGTH, NUM_ATTENTION_HEADS
 )
-from microgpt import MicroGPT
+from tokenizer import get_vocabulary_size
 from value import Value, ValueJSONEncoder
 
 DATA_FILENAME = "model_data.json"
@@ -23,6 +26,11 @@ KEY_VOCAB_SIZE = "vocab_size"
 KEY_SEEN_TRAINING_DOCS = "seen_training_docs"
 
 class ModelData:
+
+    def load_metadata(self) -> dict[str, Any]:
+        with open(METADATA_FILENAME, "r") as file_handle:
+            metadata = json.load(file_handle)
+        return metadata
 
     def load(self, training_steps: int) -> tuple[dict[str, Any], dict[str, Any]]:
         with open(DATA_FILENAME, "r") as file_handle:
@@ -44,7 +52,7 @@ class ModelData:
         return data, metadata
 
     @staticmethod
-    def save(model: MicroGPT) -> None:
+    def save(model: "MicroGPT") -> None:
         with open(DATA_FILENAME, "w") as file_handle:
             file_handle.write(json.dumps({
                 KEY_NUM_LAYERS: model.n_layer,
@@ -90,7 +98,7 @@ class ModelData:
             raise ValueError(f"Missing keys in model metadata: {missing_keys}")
 
         comparisons = {
-            KEY_VOCAB_SIZE: MicroGPT.get_vocabulary_size(data[KEY_UCHARS]),
+            KEY_VOCAB_SIZE: get_vocabulary_size(data[KEY_UCHARS]),
             KEY_NUM_TRAINING_STEPS: training_steps,
         }
         for key, expected_value in comparisons.items():
