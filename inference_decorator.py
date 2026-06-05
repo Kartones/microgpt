@@ -33,6 +33,14 @@ class InferenceDecorator:
     def _colorize_yellow(text : str) -> str:
         return f"\033[33m{text}{RESET}"
 
+    def draw_color_legend(self) -> None:
+        print(
+            f"  Legend:\n"
+            f"  {self._colorize_yellow('yellow')}: Seen during training\n"
+            f"   {self._colorize_green('green')}: In dataset, not seen during training\n"
+            f"    gray: Not in dataset, hallucinated"
+        )
+
     def decorate_result(self, result : str, index : int) -> str:
       if result not in self.docs:
           # leave standard gray for hallucinated results

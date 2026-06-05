@@ -570,6 +570,7 @@ class MicroGPT:
         inference_decorator = InferenceDecorator(self.inputs_file)
 
         print("--- inference ---")
+        inference_decorator.draw_color_legend()
         for sample_idx in range(num_inference_results):
             # Fresh KV cache for each generated name.
             keys_cache: list[list[list[Value]]]  = [[] for _ in range(self.n_layer)]
