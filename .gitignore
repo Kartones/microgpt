@@ -2,6 +2,5 @@
 __pycache__/
 .mypy_cache/
 datasets/*.txt
-model_data_*.json
-model_metadata_*.json
+data/*.json
 tmp/

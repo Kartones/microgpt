@@ -1,13 +1,15 @@
 
 import hashlib
 import json
+import os
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from microgpt import MicroGPT
 
 from config import (
-    NUM_EMBEDDING_DIMENSIONS, NUM_TRANSFORMER_LAYERS, MAX_CONTENT_LENGTH, NUM_ATTENTION_HEADS
+    NUM_EMBEDDING_DIMENSIONS, NUM_TRANSFORMER_LAYERS, MAX_CONTENT_LENGTH, NUM_ATTENTION_HEADS,
+    DATA_FOLDER
 )
 from tokenizer import get_vocabulary_size
 from value import Value, ValueJSONEncoder
@@ -21,7 +23,7 @@ def _build_filenames(inputs_file: str) -> tuple[str, str]:
         str(NUM_EMBEDDING_DIMENSIONS),
     ])
     suffix = hashlib.sha256(hash_input.encode()).hexdigest()[:8]
-    return f"model_data_{suffix}.json", f"model_metadata_{suffix}.json"
+    return f"{DATA_FOLDER}/model_data_{suffix}.json", f"{DATA_FOLDER}/model_metadata_{suffix}.json"
 
 KEY_NUM_LAYERS = "n_layer"
 KEY_BLOCK_SIZE = "block_size"
@@ -68,6 +70,7 @@ class ModelData:
 
     def save(self, model: "MicroGPT") -> None:
         data_filename, metadata_filename = _build_filenames(self.inputs_file)
+        os.makedirs(DATA_FOLDER, exist_ok=True)
         with open(data_filename, "w") as file_handle:
             file_handle.write(json.dumps({
                 KEY_NUM_LAYERS: model.n_layer,

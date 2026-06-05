@@ -9,6 +9,7 @@
 # It's a hello-world dataset for character-level language models.
 DEFAULT_INPUTS_FILE = "input.txt"
 INPUTS_FOLDER = "datasets"
+DATA_FOLDER = "data"
 
 RANDOM_SEED = 42
 
