@@ -7,7 +7,8 @@
 
 - Code heavily commented (mostly based on [Andrej's own explanatory post](https://karpathy.github.io/2026/02/12/microgpt/)). 
 - Input download logic removed. It is cool that it auto-downloads the dataset, but I wanted to decouple the model from only using a given names list. `input.txt` is this file (remember to rename it): [https://raw.githubusercontent.com/karpathy/makemore/988aa59/names.txt](https://raw.githubusercontent.com/karpathy/makemore/988aa59/names.txt)
-- Code split into classes and modules, and with type hints. 
+- Code split into classes and modules, and with type hints.
+- And quite a few other improvements
 
 ## Instructions
 
@@ -21,10 +22,11 @@ Inference only run (needs to have run with same values):
 python3 main.py --load
 ```
 
-Configuration parameters. Note that you also need to specify them on inference only mode:
+Configuration parameters. Note that you also need to specify them on inference only mode. Check `config.py` for default values.
 - `--steps=<value>`: Number of training steps
 - `--temperature=<value>`: Temperature. Lower less "creative" so less chance of hallucination, but also more probably to repeat
 - `--num-inference-results=<value>`: How many results to generate at inference
+- `--input=<filename>`: Text filename inside `datasets/` containing the input dataset
 
 ## Examples
 
