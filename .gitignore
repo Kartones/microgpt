@@ -1,7 +1,7 @@
 .DS_Store
 __pycache__/
 .mypy_cache/
-input.txt
-model_data.json
-model_metadata.json
+datasets/*.txt
+model_data_*.json
+model_metadata_*.json
 tmp/

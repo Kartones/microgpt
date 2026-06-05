@@ -8,15 +8,16 @@ RESET = "\033[0m"
 
 class InferenceDecorator:
 
-    def __init__(self) -> None:
+    def __init__(self, inputs_file: str) -> None:
+       self.inputs_file = inputs_file
        self.docs = self._load_docs()
        self.seen_training_docs = self._load_metadata()
 
     def _load_docs(self) -> list[str]:
-        return read_docs(shuffle=False)
+        return read_docs(self.inputs_file, shuffle=False)
 
     def _load_metadata(self) -> list[str]:
-        model_data = ModelData()
+        model_data = ModelData(self.inputs_file)
         metadata = model_data.load_metadata()
         return metadata[KEY_SEEN_TRAINING_DOCS]
 

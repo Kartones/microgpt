@@ -1,16 +1,18 @@
+import os
 import sys
 
-from config import DEFAULT_NUM_TRAINING_STEPS, NUM_INFERENCE_RESULTS, TEMPERATURE
+from config import DEFAULT_NUM_TRAINING_STEPS, NUM_INFERENCE_RESULTS, TEMPERATURE, DEFAULT_INPUTS_FILE, INPUTS_FOLDER
 from microgpt import MicroGPT
 from model_data import ModelData
 
-def process_args() -> tuple[bool, int, float, int]:
+def process_args() -> tuple[bool, int, float, int, str]:
     args = sys.argv[1:]
 
     load_data = False
     training_steps = DEFAULT_NUM_TRAINING_STEPS
     temperature = TEMPERATURE
     num_inference_results = NUM_INFERENCE_RESULTS
+    inputs_file = DEFAULT_INPUTS_FILE
 
     if "--load" in args:
         load_data = True
@@ -40,22 +42,30 @@ def process_args() -> tuple[bool, int, float, int]:
             except ValueError:
                 print(f"Invalid num-inference-results value: {arg}. Using default {NUM_INFERENCE_RESULTS}")
                 num_inference_results = NUM_INFERENCE_RESULTS
+        elif arg.startswith("--input="):
+            inputs_file = arg.split("=")[1] or DEFAULT_INPUTS_FILE
 
-    return load_data, training_steps, temperature, num_inference_results
+    if not inputs_file.startswith(os.path.join(INPUTS_FOLDER, "")):
+        inputs_file = os.path.join(INPUTS_FOLDER, inputs_file)
+
+    print(inputs_file)
+
+    return load_data, training_steps, temperature, num_inference_results, inputs_file
+
 
 if __name__ == '__main__':
-    model_data = ModelData()
+    load_data, training_steps, temperature, num_inference_results, inputs_file = process_args()
 
-    load_data, training_steps, temperature, num_inference_results = process_args()
+    model_data = ModelData(inputs_file)
 
     if load_data:
         print("--- loading model data ---")
         data, metadata = model_data.load(training_steps)
-        microgpt = MicroGPT(training_steps, data, metadata)
+        microgpt = MicroGPT(training_steps, inputs_file, data, metadata)
+        microgpt.infer(temperature, num_inference_results)
     else:
-        microgpt = MicroGPT(training_steps)
-
-    microgpt.run(temperature, num_inference_results)
-    if not load_data:
+        microgpt = MicroGPT(training_steps, inputs_file)
+        microgpt.train()
         print("--- saving model data ---")
         model_data.save(microgpt)
+        microgpt.infer(temperature, num_inference_results)

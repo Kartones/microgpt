@@ -34,13 +34,15 @@ from value import Value
 
 class MicroGPT:
 
-    def __init__(self, num_training_steps:int, data : dict[str, Any] | None = None, metadata : dict[str, Any] | None = None) -> None:
+    def __init__(self, num_training_steps:int, inputs_file: str, data : dict[str, Any] | None = None, metadata : dict[str, Any] | None = None) -> None:
         # Fix the random seed so every run is deterministic.
         # This matters for reproducibility:
         #  same seed → same weight initialization → same training trajectory → same final model.
         random.seed(RANDOM_SEED)
 
         self.num_training_steps = num_training_steps
+
+        self.inputs_file = inputs_file
 
         self.seen_training_docs : list[str] = []
 
@@ -63,7 +65,7 @@ class MicroGPT:
     def _dataset(self) -> None:
         # A "dataset" in language modelling is just a list of text documents.
 
-        self.docs = read_docs()
+        self.docs = read_docs(self.inputs_file)
         print(f"num docs: {len(self.docs)}")
 
     def _tokenizer(self) -> None:
@@ -565,7 +567,7 @@ class MicroGPT:
         # Without this, the PRNG position differs between training mode and inference-only mode.
         random.seed(RANDOM_SEED)
 
-        inference_decorator = InferenceDecorator()
+        inference_decorator = InferenceDecorator(self.inputs_file)
 
         print("--- inference ---")
         for sample_idx in range(num_inference_results):
@@ -604,8 +606,7 @@ class MicroGPT:
             print(inference_decorator.decorate_result(''.join(sample), sample_idx))
 
 
-    def run(self, temperature: float = TEMPERATURE, num_inference_results: int = NUM_INFERENCE_RESULTS) -> None:
-
+    def train(self) -> None:
         if not self.inference_only:
             print("--- training ---")
             self._dataset()
@@ -614,4 +615,5 @@ class MicroGPT:
             self._optimizer()
             self._training()
 
+    def infer(self, temperature: float = TEMPERATURE, num_inference_results: int = NUM_INFERENCE_RESULTS) -> None:
         self._inference(temperature, num_inference_results)

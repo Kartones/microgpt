@@ -7,7 +7,8 @@
 # Why names? They're short (avg ~5 chars), have clear structure (consonant-vowel
 # patterns, cultural clusters), and 32K of them fit in memory trivially.
 # It's a hello-world dataset for character-level language models.
-INPUTS_FILE = "input.txt"
+DEFAULT_INPUTS_FILE = "input.txt"
+INPUTS_FOLDER = "datasets"
 
 RANDOM_SEED = 42
 

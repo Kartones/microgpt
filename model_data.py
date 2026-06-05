@@ -1,4 +1,5 @@
 
+import hashlib
 import json
 from typing import TYPE_CHECKING, Any
 
@@ -11,8 +12,16 @@ from config import (
 from tokenizer import get_vocabulary_size
 from value import Value, ValueJSONEncoder
 
-DATA_FILENAME = "model_data.json"
-METADATA_FILENAME = "model_metadata.json"
+def _build_filenames(inputs_file: str) -> tuple[str, str]:
+    hash_input = "|".join([
+        inputs_file,
+        str(NUM_TRANSFORMER_LAYERS),
+        str(MAX_CONTENT_LENGTH),
+        str(NUM_ATTENTION_HEADS),
+        str(NUM_EMBEDDING_DIMENSIONS),
+    ])
+    suffix = hashlib.sha256(hash_input.encode()).hexdigest()[:8]
+    return f"model_data_{suffix}.json", f"model_metadata_{suffix}.json"
 
 KEY_NUM_LAYERS = "n_layer"
 KEY_BLOCK_SIZE = "block_size"
@@ -24,36 +33,42 @@ KEY_NUM_EMBEDDING_DIMENSIONS = "n_embd"
 KEY_NUM_TRAINING_STEPS = "num_training_steps"
 KEY_VOCAB_SIZE = "vocab_size"
 KEY_SEEN_TRAINING_DOCS = "seen_training_docs"
+KEY_INPUT_FILE = "input_file"
 
 class ModelData:
 
+    def __init__(self, inputs_file: str) -> None:
+        self.inputs_file = inputs_file
+
     def load_metadata(self) -> dict[str, Any]:
-        with open(METADATA_FILENAME, "r") as file_handle:
+        _, metadata_filename = _build_filenames(self.inputs_file)
+        with open(metadata_filename, "r") as file_handle:
             metadata = json.load(file_handle)
         return metadata
 
     def load(self, training_steps: int) -> tuple[dict[str, Any], dict[str, Any]]:
-        with open(DATA_FILENAME, "r") as file_handle:
+        data_filename, metadata_filename = _build_filenames(self.inputs_file)
+        with open(data_filename, "r") as file_handle:
             data = json.load(file_handle)
         data["state_dict"] = {
             key: [[Value(x) for x in row] for row in matrix]
             for key, matrix in data["state_dict"].items()
         }
 
-        with open(METADATA_FILENAME, "r") as file_handle:
+        with open(metadata_filename, "r") as file_handle:
             metadata = json.load(file_handle)
 
         try:
-            self._validate(data, metadata, training_steps)
+            self._validate(data, metadata, training_steps, self.inputs_file)
         except ValueError as e:
             print(f"Could not load model data: {e}")
             exit(1)
 
         return data, metadata
 
-    @staticmethod
-    def save(model: "MicroGPT") -> None:
-        with open(DATA_FILENAME, "w") as file_handle:
+    def save(self, model: "MicroGPT") -> None:
+        data_filename, metadata_filename = _build_filenames(self.inputs_file)
+        with open(data_filename, "w") as file_handle:
             file_handle.write(json.dumps({
                 KEY_NUM_LAYERS: model.n_layer,
                 KEY_BLOCK_SIZE: model.block_size,
@@ -63,16 +78,17 @@ class ModelData:
                 KEY_NUM_EMBEDDING_DIMENSIONS: model.n_embd,
             }, cls=ValueJSONEncoder))
 
-        with open(METADATA_FILENAME, "w") as file_handle:
+        with open(metadata_filename, "w") as file_handle:
             file_handle.write(json.dumps({
                 KEY_NUM_TRAINING_STEPS: model.num_training_steps,
                 KEY_VOCAB_SIZE: model.vocab_size,
                 # will be empty if not in verbose mode
                 KEY_SEEN_TRAINING_DOCS: model.seen_training_docs,
+                KEY_INPUT_FILE: self.inputs_file,
             }))
 
     @staticmethod
-    def _validate(data: dict[str, Any], metadata: dict[str, Any], training_steps: int) -> None:
+    def _validate(data: dict[str, Any], metadata: dict[str, Any], training_steps: int, inputs_file: str) -> None:
         required_data_keys = {
             KEY_NUM_LAYERS, KEY_BLOCK_SIZE, KEY_UCHARS, KEY_STATE_DICT, KEY_NUM_HEADS, KEY_NUM_EMBEDDING_DIMENSIONS
         }
@@ -92,15 +108,16 @@ class ModelData:
             if data.get(key) != expected_value:
                 raise ValueError(f"{key} mismatch: expected {expected_value}, got {data.get(key)}")
 
-        required_metadata_keys = {KEY_NUM_TRAINING_STEPS, KEY_VOCAB_SIZE}
+        required_metadata_keys = {KEY_NUM_TRAINING_STEPS, KEY_VOCAB_SIZE, KEY_INPUT_FILE}
         missing_keys = required_metadata_keys - metadata.keys()
         if missing_keys:
             raise ValueError(f"Missing keys in model metadata: {missing_keys}")
 
-        comparisons = {
+        metadata_comparisons: dict[str, Any] = {
             KEY_VOCAB_SIZE: get_vocabulary_size(data[KEY_UCHARS]),
             KEY_NUM_TRAINING_STEPS: training_steps,
+            KEY_INPUT_FILE: inputs_file,
         }
-        for key, expected_value in comparisons.items():
+        for key, expected_value in metadata_comparisons.items():
             if metadata.get(key) != expected_value:
                 raise ValueError(f"{key} mismatch: expected {expected_value}, got {metadata.get(key)}")
