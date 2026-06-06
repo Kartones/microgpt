@@ -584,30 +584,34 @@ class MicroGPT:
 
         return next_token_id
 
-    def _input_inference(self, inference_decorator: InferenceDecorator, temperature: float) -> None:
-        keys_cache: list[list[list[Value]]]  = [[] for _ in range(self.n_layer)]
-        values_cache: list[list[list[Value]]] = [[] for _ in range(self.n_layer)]
+    def _input_inference(
+            self, inference_decorator: InferenceDecorator, temperature: float, num_inference_results: int) -> None:
 
         input_sequence = input(f"\nEnter starting sequence (max {self.block_size - 1} characters): ")
         input_sequence = input_sequence.strip().lower()
         if len(input_sequence) > self.block_size - 1:
             print(f"Input sequence too long (max {self.block_size - 1} characters)")
             exit(1)
-
         sequence = [self.uchars.index(ch) for ch in input_sequence]
-        sample = [self.uchars[token_id] for token_id in sequence]
 
-        token_id = sequence[-1]
-        for pos_id in range(len(sequence)-1, self.block_size):
-            token_id = self._next_token(token_id, pos_id, keys_cache, values_cache, temperature)
+        for sample_idx in range(num_inference_results):
+            # Fresh KV cache for each generated name.
+            keys_cache: list[list[list[Value]]]  = [[] for _ in range(self.n_layer)]
+            values_cache: list[list[list[Value]]] = [[] for _ in range(self.n_layer)]
 
-            # If we sampled BOS, the model is signaling "end of name"
-            if token_id == self.BOS:
-                break
+            sample = [self.uchars[token_id] for token_id in sequence]
 
-            sample.append(self.uchars[token_id])
+            token_id = sequence[-1]
+            for pos_id in range(len(sequence)-1, self.block_size):
+                token_id = self._next_token(token_id, pos_id, keys_cache, values_cache, temperature)
 
-        print(inference_decorator.decorate_result(''.join(sample), 0))
+                # If we sampled BOS, the model is signaling "end of name"
+                if token_id == self.BOS:
+                    break
+
+                sample.append(self.uchars[token_id])
+
+            print(inference_decorator.decorate_result(''.join(sample), sample_idx))
 
 
     def _random_inference(
@@ -664,6 +668,6 @@ class MicroGPT:
         inference_decorator.draw_color_legend()
 
         if inference_input:
-            self._input_inference(inference_decorator, temperature)
+            self._input_inference(inference_decorator, temperature, num_inference_results)
         else:
             self._random_inference(inference_decorator, temperature, num_inference_results)
