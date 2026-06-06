@@ -31,6 +31,8 @@ from inference_decorator import InferenceDecorator
 from tokenizer import unique_chars, get_BOS_token_id, get_vocabulary_size
 from value import Value
 
+UNINITIALIZED : Any = None
+
 
 class MicroGPT:
 
@@ -51,6 +53,21 @@ class MicroGPT:
         self.seen_training_docs : list[str] = []
 
         self.inference_only = False
+
+        self.n_layer : int = UNINITIALIZED
+        self.n_head : int = UNINITIALIZED
+        self.n_embd : int = UNINITIALIZED
+        self.block_size : int = UNINITIALIZED
+        self.uchars : list[str] = UNINITIALIZED
+        self.vocab_size : int = UNINITIALIZED
+        self.BOS : int = UNINITIALIZED
+        self.state_dict : dict[str, list[list[Value]]] = UNINITIALIZED
+        self.head_dim : int = UNINITIALIZED
+        self.docs : list[str] = UNINITIALIZED
+        self.params : list[Value] = UNINITIALIZED
+        self.learning_rate : float = UNINITIALIZED
+        self.m : list[float] = UNINITIALIZED
+        self.v : list[float] = UNINITIALIZED
 
         if data:
             self.n_layer = data["n_layer"]
