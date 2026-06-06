@@ -34,11 +34,15 @@ from value import Value
 
 class MicroGPT:
 
-    def __init__(self, num_training_steps:int, inputs_file: str, data : dict[str, Any] | None = None, metadata : dict[str, Any] | None = None) -> None:
-        # Fix the random seed so every run is deterministic.
-        # This matters for reproducibility:
-        #  same seed → same weight initialization → same training trajectory → same final model.
-        random.seed(RANDOM_SEED)
+    def __init__(
+            self, num_training_steps : int, inputs_file : str, data : dict[str, Any] | None = None,
+            metadata : dict[str, Any] | None = None, fixed_random_seed : bool = True) -> None:
+
+        if fixed_random_seed:
+            # Fix the random seed so every run is deterministic.
+            # This matters for reproducibility:
+            #  same seed → same weight initialization → same training trajectory → same final model.
+            random.seed(RANDOM_SEED)
 
         self.num_training_steps = num_training_steps
 
@@ -642,17 +646,24 @@ class MicroGPT:
             self._optimizer()
             self._training()
 
-    def infer(self, temperature: float, num_inference_results: int, random_inference: bool) -> None:
+    def infer(
+            self, temperature: float, num_inference_results: int, inference_input: bool, fixed_random_seed: bool
+        ) -> None:
+
         print("--- inference ---")
 
-        # Re-seeding here so inference is deterministic regardless of whether training ran beforehand.
-        # Without this, the PRNG position differs between training mode and inference-only mode.
-        random.seed(RANDOM_SEED)
+        if fixed_random_seed:
+            print(f"  Fixed random seed for inference: {RANDOM_SEED}")
+            # Re-seeding here so inference is deterministic regardless of whether training ran beforehand.
+            # Without this, the PRNG position differs between training mode and inference-only mode.
+            random.seed(RANDOM_SEED)
+        else:
+            print("  NOT fixing random seed for inference")
 
         inference_decorator = InferenceDecorator(self.inputs_file)
         inference_decorator.draw_color_legend()
 
-        if random_inference:
-            self._random_inference(inference_decorator, temperature, num_inference_results)
-        else:
+        if inference_input:
             self._input_inference(inference_decorator, temperature)
+        else:
+            self._random_inference(inference_decorator, temperature, num_inference_results)

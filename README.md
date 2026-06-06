@@ -37,6 +37,7 @@ Note that you also need to specify some also in inference only mode. Check `conf
 - `--input=<filename>`: Text filename inside `datasets/` containing the input dataset
 - `--inference-input`: Ask for a starting sequence/sample, instead of generating random ones
 - `--num-inference-results=<value>`: How many results to generate at inference, if generating random ones
+- `--random-seed`: Do not use a fixed seed for random number generation
 
 ## Examples
 

@@ -20,7 +20,8 @@ class Args:
     temperature: float
     num_inference_results: int
     inputs_file: str
-    random_inference: bool
+    inference_input: bool
+    fixed_random_seed: bool
 
 
 def process_args() -> Args:
@@ -31,7 +32,8 @@ def process_args() -> Args:
     temperature = TEMPERATURE
     num_inference_results = NUM_INFERENCE_RESULTS
     inputs_file = DEFAULT_INPUTS_FILE
-    random_inference = True
+    inference_input = False
+    fixed_random_seed = True
 
     if "--load" in args:
         load_data = True
@@ -64,14 +66,18 @@ def process_args() -> Args:
         elif arg.startswith("--input="):
             inputs_file = arg.split("=")[1] or DEFAULT_INPUTS_FILE
         elif arg == "--inference-input":
-            random_inference = False
+            inference_input = True
+        elif arg == "--random-seed":
+            fixed_random_seed = False
 
     if not inputs_file.startswith(os.path.join(INPUTS_FOLDER, "")):
         inputs_file = os.path.join(INPUTS_FOLDER, inputs_file)
 
     print(inputs_file)
 
-    return Args(load_data, training_steps, temperature, num_inference_results, inputs_file, random_inference)
+    return Args(
+        load_data, training_steps, temperature, num_inference_results, inputs_file, inference_input, fixed_random_seed
+    )
 
 
 def print_config(
@@ -107,14 +113,20 @@ if __name__ == '__main__':
     if args.load_data:
         print("--- loading model data ---")
         data, metadata = model_data.load(args.training_steps)
-        microgpt = MicroGPT(args.training_steps, args.inputs_file, data, metadata)
+        microgpt = MicroGPT(
+            num_training_steps = args.training_steps, inputs_file = args.inputs_file, data = data, metadata = metadata,
+            fixed_random_seed = args.fixed_random_seed
+        )
         print_config(args.training_steps, args.temperature, args.inputs_file, data, metadata)
-        microgpt.infer(args.temperature, args.num_inference_results, args.random_inference)
+        microgpt.infer(args.temperature, args.num_inference_results, args.inference_input, args.fixed_random_seed)
     else:
         print("--- preparing model data ---")
-        microgpt = MicroGPT(args.training_steps, args.inputs_file)
+        microgpt = MicroGPT(
+            num_training_steps = args.training_steps, inputs_file = args.inputs_file,
+            fixed_random_seed = args.fixed_random_seed
+        )
         print_config(args.training_steps, args.temperature, args.inputs_file)
         microgpt.train()
         print("--- saving model data ---")
         model_data.save(microgpt)
-        microgpt.infer(args.temperature, args.num_inference_results, args.random_inference)
+        microgpt.infer(args.temperature, args.num_inference_results, args.inference_input, args.fixed_random_seed)
