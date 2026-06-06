@@ -558,50 +558,76 @@ class MicroGPT:
 
         print()  # newline after training is done
 
-    def _inference(self, temperature: float = TEMPERATURE, num_inference_results: int = NUM_INFERENCE_RESULTS) -> None:
+    def _next_token(
+            self, token_id: int, pos_id: int, keys_cache: list[list[list[Value]]], values_cache: list[list[list[Value]]],
+            temperature: float) -> int:
+
+        # Get logits from the model given the current token and position.
+        logits = self._gpt(token_id, pos_id, keys_cache, values_cache)
+
+        # Apply temperature scaling to logits (not to probabilities).
+        # Dividing logits by T < 1 makes differences between logits larger,
+        # sharpening the softmax distribution (peakier → more deterministic).
+        # Mathematically equivalent to: softmax(logits/T)
+        probs = self._softmax([l / temperature for l in logits])
+
+        # Sample next token from the probability distribution.
+        # random.choices returns a weighted random sample — this is the
+        # stochastic part of generation. Two identical prefixes can yield
+        # different continuations.
+        # Note: .data is needed to extract plain floats from Value nodes.
+        next_token_id = random.choices(range(self.vocab_size), weights=[p.data for p in probs])[0]
+
+        return next_token_id
+
+    def _input_inference(self, inference_decorator: InferenceDecorator, temperature: float) -> None:
+        keys_cache: list[list[list[Value]]]  = [[] for _ in range(self.n_layer)]
+        values_cache: list[list[list[Value]]] = [[] for _ in range(self.n_layer)]
+
+        input_sequence = input(f"\nEnter starting sequence (max {self.block_size - 1} characters): ")
+        input_sequence = input_sequence.strip().lower()
+        if len(input_sequence) > self.block_size - 1:
+            print(f"Input sequence too long (max {self.block_size - 1} characters)")
+            exit(1)
+
+        sequence = [self.uchars.index(ch) for ch in input_sequence]
+        sample = [self.uchars[token_id] for token_id in sequence]
+
+        token_id = sequence[-1]
+        for pos_id in range(len(sequence)-1, self.block_size):
+            token_id = self._next_token(token_id, pos_id, keys_cache, values_cache, temperature)
+
+            # If we sampled BOS, the model is signaling "end of name"
+            if token_id == self.BOS:
+                break
+
+            sample.append(self.uchars[token_id])
+
+        print(inference_decorator.decorate_result(''.join(sample), 0))
+
+
+    def _random_inference(
+            self, inference_decorator: InferenceDecorator, temperature: float, num_inference_results: int) -> None:
         # After training or on demand, use the model to generate new names.
         # The model might never have seen these names — it learned the underlying distribution
         # of character sequences and samples from it.
 
-        # Re-seeding here so inference is deterministic regardless of whether training ran beforehand.
-        # Without this, the PRNG position differs between training mode and inference-only mode.
-        random.seed(RANDOM_SEED)
-
-        inference_decorator = InferenceDecorator(self.inputs_file)
-
-        print("--- inference ---")
-        inference_decorator.draw_color_legend()
         for sample_idx in range(num_inference_results):
             # Fresh KV cache for each generated name.
             keys_cache: list[list[list[Value]]]  = [[] for _ in range(self.n_layer)]
             values_cache: list[list[list[Value]]] = [[] for _ in range(self.n_layer)]
 
-            # Start generation with BOS — this signals "beginning of a new name".
+            # Start generation with BOS: this signals "beginning of a new name".
             token_id = self.BOS
             sample = []
 
             for pos_id in range(self.block_size):
-                # Get logits from the model given the current token and position.
-                logits = self._gpt(token_id, pos_id, keys_cache, values_cache)
+                token_id = self._next_token(token_id, pos_id, keys_cache, values_cache, temperature)
 
-                # Apply temperature scaling to logits (not to probabilities).
-                # Dividing logits by T < 1 makes differences between logits larger,
-                # sharpening the softmax distribution (peakier → more deterministic).
-                # Mathematically equivalent to: softmax(logits/T)
-                probs = self._softmax([l / temperature for l in logits])
-
-                # Sample next token from the probability distribution.
-                # random.choices returns a weighted random sample — this is the
-                # stochastic part of generation. Two identical prefixes can yield
-                # different continuations.
-                # Note: .data is needed to extract plain floats from Value nodes.
-                token_id = random.choices(range(self.vocab_size), weights=[p.data for p in probs])[0]
-
-                # If we sampled BOS, the model is signaling "end of name" — stop.
+                # If we sampled BOS, the model is signaling "end of name"
                 if token_id == self.BOS:
                     break
 
-                # Map token ID back to character and append to the current sample.
                 sample.append(self.uchars[token_id])
 
             print(inference_decorator.decorate_result(''.join(sample), sample_idx))
@@ -616,5 +642,17 @@ class MicroGPT:
             self._optimizer()
             self._training()
 
-    def infer(self, temperature: float = TEMPERATURE, num_inference_results: int = NUM_INFERENCE_RESULTS) -> None:
-        self._inference(temperature, num_inference_results)
+    def infer(self, temperature: float, num_inference_results: int, random_inference: bool) -> None:
+        print("--- inference ---")
+
+        # Re-seeding here so inference is deterministic regardless of whether training ran beforehand.
+        # Without this, the PRNG position differs between training mode and inference-only mode.
+        random.seed(RANDOM_SEED)
+
+        inference_decorator = InferenceDecorator(self.inputs_file)
+        inference_decorator.draw_color_legend()
+
+        if random_inference:
+            self._random_inference(inference_decorator, temperature, num_inference_results)
+        else:
+            self._input_inference(inference_decorator, temperature)

@@ -36,7 +36,7 @@ class InferenceDecorator:
     def draw_color_legend(self) -> None:
         print(
             f"  Legend:\n"
-            f"  {self._colorize_yellow('yellow')}: Seen during training\n"
+            f"  {self._colorize_yellow('yellow')}: In dataset, seen during training\n"
             f"   {self._colorize_green('green')}: In dataset, not seen during training\n"
             f"    gray: Not in dataset, hallucinated"
         )

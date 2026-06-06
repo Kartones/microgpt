@@ -1,5 +1,6 @@
 import os
 import sys
+from dataclasses import dataclass
 
 from config import (
     DEFAULT_NUM_TRAINING_STEPS, NUM_INFERENCE_RESULTS, TEMPERATURE, DEFAULT_INPUTS_FILE, INPUTS_FOLDER,
@@ -12,7 +13,17 @@ from model_data import (
     KEY_NUM_TRAINING_STEPS, KEY_VOCAB_SIZE,
 )
 
-def process_args() -> tuple[bool, int, float, int, str]:
+@dataclass
+class Args:
+    load_data: bool
+    training_steps: int
+    temperature: float
+    num_inference_results: int
+    inputs_file: str
+    random_inference: bool
+
+
+def process_args() -> Args:
     args = sys.argv[1:]
 
     load_data = False
@@ -20,6 +31,7 @@ def process_args() -> tuple[bool, int, float, int, str]:
     temperature = TEMPERATURE
     num_inference_results = NUM_INFERENCE_RESULTS
     inputs_file = DEFAULT_INPUTS_FILE
+    random_inference = True
 
     if "--load" in args:
         load_data = True
@@ -51,13 +63,15 @@ def process_args() -> tuple[bool, int, float, int, str]:
                 num_inference_results = NUM_INFERENCE_RESULTS
         elif arg.startswith("--input="):
             inputs_file = arg.split("=")[1] or DEFAULT_INPUTS_FILE
+        elif arg == "--inference-input":
+            random_inference = False
 
     if not inputs_file.startswith(os.path.join(INPUTS_FOLDER, "")):
         inputs_file = os.path.join(INPUTS_FOLDER, inputs_file)
 
     print(inputs_file)
 
-    return load_data, training_steps, temperature, num_inference_results, inputs_file
+    return Args(load_data, training_steps, temperature, num_inference_results, inputs_file, random_inference)
 
 
 def print_config(
@@ -86,21 +100,21 @@ def print_config(
 
 
 if __name__ == '__main__':
-    load_data, training_steps, temperature, num_inference_results, inputs_file = process_args()
+    args = process_args()
 
-    model_data = ModelData(inputs_file)
+    model_data = ModelData(args.inputs_file)
 
-    if load_data:
+    if args.load_data:
         print("--- loading model data ---")
-        data, metadata = model_data.load(training_steps)
-        microgpt = MicroGPT(training_steps, inputs_file, data, metadata)
-        print_config(training_steps, temperature, inputs_file, data, metadata)
-        microgpt.infer(temperature, num_inference_results)
+        data, metadata = model_data.load(args.training_steps)
+        microgpt = MicroGPT(args.training_steps, args.inputs_file, data, metadata)
+        print_config(args.training_steps, args.temperature, args.inputs_file, data, metadata)
+        microgpt.infer(args.temperature, args.num_inference_results, args.random_inference)
     else:
         print("--- preparing model data ---")
-        microgpt = MicroGPT(training_steps, inputs_file)
-        print_config(training_steps, temperature, inputs_file)
+        microgpt = MicroGPT(args.training_steps, args.inputs_file)
+        print_config(args.training_steps, args.temperature, args.inputs_file)
         microgpt.train()
         print("--- saving model data ---")
         model_data.save(microgpt)
-        microgpt.infer(temperature, num_inference_results)
+        microgpt.infer(args.temperature, args.num_inference_results, args.random_inference)
