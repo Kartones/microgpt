@@ -118,9 +118,15 @@ class ModelData:
 
         metadata_comparisons: dict[str, Any] = {
             KEY_VOCAB_SIZE: get_vocabulary_size(data[KEY_UCHARS]),
-            KEY_NUM_TRAINING_STEPS: training_steps,
             KEY_INPUT_FILE: inputs_file,
         }
         for key, expected_value in metadata_comparisons.items():
             if metadata.get(key) != expected_value:
                 raise ValueError(f"{key} mismatch: expected {expected_value}, got {metadata.get(key)}")
+
+        metadata_warnings: dict[str, Any] = {
+            KEY_NUM_TRAINING_STEPS: training_steps,
+        }
+        for key, expected_value in metadata_warnings.items():
+            if metadata.get(key) != expected_value:
+                print(f"\033[33mWarning: {key} mismatch: expected {expected_value}, got {metadata.get(key)}\033[0m")
