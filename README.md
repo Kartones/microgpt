@@ -1,14 +1,17 @@
-# MicroGPT - Commented Edition
+# MicroGPT - Learning Edition
 
 ## Introduction
 
-[MicroGPT](https://gist.github.com/karpathy/8627fe009c40f57531cb18360106ce95), from [Andrej Karpathy](https://karpathy.ai/), but commented and refactored for learning.
+[MicroGPT](https://gist.github.com/karpathy/8627fe009c40f57531cb18360106ce95), from [Andrej Karpathy](https://karpathy.ai/), but commented, refactored and expanded for learning.
 
 
 - Code heavily commented (mostly based on [Andrej's own explanatory post](https://karpathy.github.io/2026/02/12/microgpt/)). 
 - Input download logic removed. It is cool that it auto-downloads the dataset, but I wanted to decouple the model from only using a given names list. `input.txt` is this file (rename it and place it under `datasets/`): [https://raw.githubusercontent.com/karpathy/makemore/988aa59/names.txt](https://raw.githubusercontent.com/karpathy/makemore/988aa59/names.txt)
 - Code split into classes and modules, and with type hints.
-- And quite a few other improvements (see )
+- Support for different input datasets.
+- Storage of training data, for inference-only mode. Data is stored based on input and configuration, allowing you to keep different trained models data.
+- Configurable parameters, some via command line arguments, others via config overrides.
+- And quite a few other improvements. See below
 
 ## Instructions
 
