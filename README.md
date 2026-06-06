@@ -6,7 +6,7 @@
 
 
 - Code heavily commented (mostly based on [Andrej's own explanatory post](https://karpathy.github.io/2026/02/12/microgpt/)). 
-- Input download logic removed. It is cool that it auto-downloads the dataset, but I wanted to decouple the model from only using a given names list. `input.txt` is this file (remember to rename it and place it under `datasets/`): [https://raw.githubusercontent.com/karpathy/makemore/988aa59/names.txt](https://raw.githubusercontent.com/karpathy/makemore/988aa59/names.txt)
+- Input download logic removed. It is cool that it auto-downloads the dataset, but I wanted to decouple the model from only using a given names list. `input.txt` is this file (rename it and place it under `datasets/`): [https://raw.githubusercontent.com/karpathy/makemore/988aa59/names.txt](https://raw.githubusercontent.com/karpathy/makemore/988aa59/names.txt)
 - Code split into classes and modules, and with type hints.
 - And quite a few other improvements (see )
 
@@ -27,7 +27,6 @@ Inference only run (needs to have run with same values) - asks for starting sequ
 python3 main.py --inference-input --load
 ```
 
-
 ### Configuration parameters
 
 Note that you also need to specify some also in inference only mode. Check `config.py` for the default values.
@@ -38,6 +37,10 @@ Note that you also need to specify some also in inference only mode. Check `conf
 - `--inference-input`: Ask for a starting sequence/sample, instead of generating random ones
 - `--num-inference-results=<value>`: How many results to generate at inference, if generating random ones
 - `--random-seed`: Do not use a fixed seed for random number generation
+
+### Modifying hyperparameters
+
+To change the hyperparameters present at `config.py`, edit `config_override.py` and add there the constants that you wish to override.
 
 ## Examples
 

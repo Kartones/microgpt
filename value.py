@@ -2,6 +2,11 @@ from __future__ import annotations
 
 import json
 import math
+import sys
+
+from config import MAX_RECURSION_DEPTH
+
+sys.setrecursionlimit(MAX_RECURSION_DEPTH)
 
 # =============================================================================
 # SECTION 3: AUTOGRAD ENGINE

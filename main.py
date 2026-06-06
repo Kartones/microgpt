@@ -73,8 +73,6 @@ def process_args() -> Args:
     if not inputs_file.startswith(os.path.join(INPUTS_FOLDER, "")):
         inputs_file = os.path.join(INPUTS_FOLDER, inputs_file)
 
-    print(inputs_file)
-
     return Args(
         load_data, training_steps, temperature, num_inference_results, inputs_file, inference_input, fixed_random_seed
     )

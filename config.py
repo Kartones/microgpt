@@ -8,6 +8,7 @@
 # patterns, cultural clusters), and 32K of them fit in memory trivially.
 # It's a hello-world dataset for character-level language models.
 DEFAULT_INPUTS_FILE = "input.txt"
+
 INPUTS_FOLDER = "datasets"
 DATA_FOLDER = "data"
 
@@ -52,3 +53,14 @@ NUM_INFERENCE_RESULTS = 20
 
 # If true, will store additional metadata information. Requires more memory.
 VERBOSE_METADATA = True
+
+# If you want to tweak the hyperparameters, do it inside config_override.py
+try:
+    from config_override import *
+except:
+    pass
+
+# Maximum recursion depth for the autograd backward pass (build_topo).
+# Graph depth scales with layers × dims × ~8 ops/layer (Q,K,V,proj,MLP*2,norms).
+# 2x headroom factor guards against overrides and edge cases.
+MAX_RECURSION_DEPTH = NUM_TRANSFORMER_LAYERS * NUM_EMBEDDING_DIMENSIONS * 8 * 2
